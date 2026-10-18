@@ -23,11 +23,9 @@ import requests
 # 20 разных картинок (у каждой свой номер в адресе)
 URLS = [f"https://picsum.photos/seed/{i}/800/600" for i in range(20)]
 
-# Битые адреса для проверки
 BAD_URLS = [
-    "https://no-such-site.invalid",  # домена не существует, упадёт сразу
-    "https://httpbin.org/delay/10",  # отвечает 10 секунд, сработает таймаут
-]
+    "https://no-such-site.invalid", 
+    "https://httpbin.org/delay/10", 
 
 
 def timed(label, fn, *args):
@@ -43,25 +41,25 @@ async def robust_fetch(
     retries: int = 3,
     timeout: float = 5.0,
 ) -> int:
-    delay = 1  # первая пауза 1 секунда
+    delay = 1  
     for attempt in range(1, retries + 1):
         try:
             resp = await client.get(url, timeout=timeout)
-            resp.raise_for_status()  # без этого 4xx/5xx не станут исключением
+            resp.raise_for_status()  
             return resp.status_code
         except httpx.HTTPError as exc:
-            # 4xx (кроме 429) повторять бессмысленно
+           
             if (
                 isinstance(exc, httpx.HTTPStatusError)
                 and 400 <= exc.response.status_code < 500
                 and exc.response.status_code != 429
             ):
                 raise
-            # последняя попытка: не прячем ошибку
+           
             if attempt == retries:
                 raise
-            await asyncio.sleep(delay)  # именно asyncio.sleep, не time.sleep
-            delay *= 2  # экспоненциальный backoff: 1 -> 2 -> 4
+            await asyncio.sleep(delay)  
+            delay *= 2  
 
 
 async def robust_main():
@@ -69,7 +67,7 @@ async def robust_main():
     async with httpx.AsyncClient(follow_redirects=True) as client:
         outcomes = await asyncio.gather(
             *(robust_fetch(client, url) for url in urls),
-            return_exceptions=True,  # исключения приходят в списке результатов
+            return_exceptions=True, 
         )
 
     results, errors = [], []
