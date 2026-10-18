@@ -29,8 +29,7 @@ def timed(label, fn, *args):
 
 def sync_main():
     for url in URLS:
-        requests.get(url)  # по очереди, время складывается
-
+        requests.get(url) 
 
 async def fetch(client: httpx.AsyncClient, url: str) -> int:
     resp = await client.get(url)
