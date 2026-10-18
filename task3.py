@@ -36,38 +36,30 @@ def timed(label, fn, *args):
 
 
 def heavy(body: bytes) -> str:
-    # body * 1000 раздувает данные, чтобы хеш считался заметно долго
     return hashlib.sha256(body * 5000).hexdigest()
 
 
 async def ticker():
-    # «пульс» event loop: если точки перестали печататься, loop заблокирован
     while True:
         print(".", end="", flush=True)
         await asyncio.sleep(0.1)
 
 
 async def cpu_main():
-    # 1) ticker запускаем фоновой задачей
     ticker_task = asyncio.create_task(ticker())
 
-    # скачиваем все ответы (на этом этапе точки бегут)
     t = time.perf_counter()
     async with httpx.AsyncClient(follow_redirects=True) as client:
         responses = await asyncio.gather(*(client.get(u) for u in URLS))
     bodies = [r.content for r in responses]
     print(f"\n[скачивание: {time.perf_counter() - t:.2f}s]")
 
-    # 2) heavy «в лоб»: точки ЗАМРУТ
     print("[в лоб] точки должны замереть:")
     t = time.perf_counter()
     hashes_direct = [heavy(b) for b in bodies]
     print(f"\n[в лоб: {time.perf_counter() - t:.2f}s]")
 
-    # даём ticker шанс напечатать точки после блокировки
     await asyncio.sleep(0.3)
-
-    # 3) heavy через процессы: точки БЕГУТ
     print("[через процессы] точки должны бежать:")
     t = time.perf_counter()
     loop = asyncio.get_running_loop()
@@ -79,7 +71,6 @@ async def cpu_main():
 
     print("Хеши совпали:", hashes_direct == list(hashes_pool))
 
-    # 4) отменяем ticker
     ticker_task.cancel()
     try:
         await ticker_task
@@ -88,6 +79,4 @@ async def cpu_main():
 
 
 if __name__ == "__main__":
-    # проверка обязательна: без неё ProcessPoolExecutor падает на Windows
-    # и macOS, дочерние процессы заново импортируют этот файл
     timed("cpu ", lambda: asyncio.run(cpu_main()))
